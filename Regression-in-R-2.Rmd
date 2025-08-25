@@ -1,0 +1,127 @@
+---
+title: "Úkol 2 Ekonometrie 1"
+author: "DrL"
+date: "`r Sys.Date()`"
+output: html_document
+---
+V úlohách 1–3 budete pracovat s prvním datovým souborem, který je výňatkem z dat použitých ve studii Lukeš, Longo a Zouhar (2019). Datový soubor obsahuje informace o více než tisíci italských inovačních startupech.
+
+Zajímat nás budou následující numerické proměnné:
+
+age – počet let od registrace startupu v italském obchodním rejstříku,
+
+revenue – tržby za rok 2015 (v tisících EUR),
+
+initial capital – počáteční kapitál (ve stejných jednotkách),
+
+employees – počet zaměstnanců.
+
+Kromě toho budeme používat kategoriální proměnnou industry (odvětví), která je zakódována dle klasifikace NACE do následujících kategorií:
+
+Manuf – výroba,
+
+ICT – informační a komunikační technologie,
+
+ProfSciTech – profesionální, vědecké a technické činnosti,
+
+Other – ostatní.
+--------------------------------
+
+Úloha 1
+Řada startupů v datovém souboru ještě nezačala generovat tržby – jejich tržby jsou tedy nulové. Pomocí logistické regrese modelujte pravděpodobnost, že tržby jsou nenulové (v tomto případě tedy nenulové tržby představují „úspěch“). Jako vysvětlující proměnné použijte:
+
+age (věk startupu),
+
+initial capital (počáteční kapitál)
+
+a industry (odvětví podnikání).
+
+Jaký je podle vašich výsledků rozdíl v poměru šancí (odds ratio) mezi výrobními podniky a firmami působícími v oblasti profesionálních, vědeckých a technických činností?
+Uveďte jasnou odpověď obsahující jak číselný výsledek, tak jeho interpretaci.
+
+DrL Popis modelu a proměnných -
+age - diskrétní číselná proměnná
+revenue - spojitá číselná proměnná
+počíteční kapitál - spojitá číselná proměnná
+employees - diskrétní číselná proměnná
+industry - kategoriální proměnná, 4 kategorie, tedy vytvořit 3 dummy proměnné
+Pro logistickou regresi modeluji úspěch jako střední hodnotu, dummy proměnné vytvořím tak, že kategoriální proměnnou dám do funkce factor ještě před vytvořením modelu a do modelu pak vložím proměnnou jako by se nechumemlilo.
+Pomocí funkce ifelse jsem také zadefinoval novuo binární proměnnou do dat pomocí bežné ifelse (ekvivalent if v enxcelu).
+Pro vyjádření pravděpodobností musím ještě koeficienty a dát jako mocnitele exponenciální funkce e.
+Je důležité myslet, že u dummy proměnných poměřuji pravděpodobnost na úspěch, tedy při porovnávání vycházím ze základu, kterým je již nějaká pravděpodnobst úspěchu a nikoli úplná pravděpodobnost 100 %.
+
+
+```{r}
+data1 <-read.csv("limd00_data.csv")
+str(data1)
+data1$industry <- factor(data1$industry)
+levels(data1$industry)
+data1$industry <-relevel(data1$industry, ref=4)
+data1$revenue_binary<- ifelse(data1$revenue>0,1,0)
+model1 <- glm(revenue_binary ~ age + initial_capital + industry, data=data1, family = binomial)
+summary(model1)
+exp(coef(model1))
+#Oproti podnikům ProfSciTech se šance na úspěch se vynásobí 0.6962krát pro výrobní podniky jinak nezměněných podmínek, pokud ostatní proměnné jsou 0.
+```
+
+Úloha 2
+Pokračujte v práci s modelem odhadnutým v předchozí úloze. Pomocí likelihood ratio testu (LR testu) otestujte, zda pravděpodobnost úspěchu závisí na odvětví podnikání. Test proveďte na 5% hladině významnosti.
+
+DrL
+takto bych si z voleje představoval hypotézy:, úspěch stále definuji jako výnosy>0
+pravděpodobnost úspěchu nezávisí na odvětví podnikání, tím pádem pro všechny odvětví podnikání jsou šance na úspěch statisticky stejné H0
+pravděpodobnost úspěchu závisí na odvětví podnikání, tím pádem pro alespoň jeden obor podnikání jsou šance na úspěch statisticky jiné než pro ostatní odvětví H1
+LR test neznám, ani v prezentacích ani ve civčení jsem ho letmo nenašel
+
+Pozor, i když jsem si to myslel, tak nefunguje jako klasický t-test na významnosti proměnných, kde vycházím z odhadu parametru a odhadu směrodatné odchylky proměnné, ale funguje na bázi lineární restrikce, tedyzíská maximální věrohodnost 2 modelů bez proměnné industry s ní, (log-likelihood) s počtem stupňů volnosti rovným počtu otestovaných restrikcí (4-1=3)
+Funguji tak, že zadefinuji oba modely, vytáhnu z nich log-likelihood statstiku a jelikož vychází z chí-kvadrát rozdělení, použiji funkci anova
+family = binomial to mi poradil chatgpt a říká, že pracujeme s binární závislou proměnnou a modelujeme pravděpodobnost výskytu jedné z kategorií (např. 1 = úspěch) z mého chápání ale vychází, že v tomto modelu můžeme definovat jen úspěch, tedy že y=1. Pokud bychom chtěli modelovat neúspěch, tak musíme nejdříve proměnnou zadefinovat opačně, že úspěch je vlastně výnosy=0
+Čím nižší deviance, tím lepší shoda modelu s daty
+```{r}
+# Model bez industry
+model_restricted <- glm(revenue_binary ~ age + initial_capital, data=data1, family = binomial)
+
+# Model s industry
+model_full <- glm(revenue_binary ~ age + initial_capital + industry, data=data1, family = binomial)
+
+# Likelihood ratio test
+anova(model_restricted, model_full, test = "LRT")
+
+#P-hodnota je 0.0569, to znamená, že na hladině významnosti 5% nemůžeme zamítnout H0, tedy nemůžeme zamítnout hypotézu, že šance na úspěch nezávisí na odvětví podnikání firmy.
+#Stupně volnosti =3
+#Testovací statistika = rozdíl deviancí (7.5275)
+```
+
+Úloha 3
+Opět pracujte se stejným modelem jako v předchozích úlohách.
+Spočítejte průměrný mezní efekt (Average Marginal Effect, AME) proměnné age (věk startupu).
+Pečlivě interpretujte jeho hodnotu.
+
+Následně vytvořte 95% interval spolehlivosti pro tento průměrný mezní efekt pomocí:
+(i) Delta metody
+(ii) neparametrického bootstrapu s 1000 replikacemi.
+
+
+
+AME - typicky v logistické regresi, ezní efekty závisí na hodnotách všech proměnných v modelu
+Nejprve pro každého jednotlivce (řádek v datasetu) spočítá mezní efekt dané proměnné.
+Poté tyto efekty sprůměruje přes celý vzorek.
+Delta metoda aproximuje rozptyl (a tedy i směrodatnou odchylku) funkce odhadnutých parametrů pomocí Taylorovy řady. -R toho docílím pomocí jendouché funkce summary na margins 
+
+Bootstrap nemá samostatnou funkci v balíčku margins, ale lze ho nastavit jako parametr funkce margins, "vce", stejně jako volba pčtu iterací
+
+interpretace "procentní bod" byl od chatgpt
+```{r}
+library("margins")
+ame_model1<-margins(model1)
+summary(ame_model1)
+
+set.seed(1234)
+ame_bootstrap <- margins(model1, vce = "bootstrap", iterations = 1000)
+summary(ame_bootstrap)
+
+#Průměrný marginální efekt u proměnné age je 0.0315. To znamená, že pokud start-up je v datech o 1 rok starší, tak se mu zvýší průměrná predikovaná pravděpodobnost na úspěch 3,15 % za jinak stejných podmínek.
+#Tento odhad se dle delta metody nachází na 95% intervalu spolehlivosti (-0,27 procentnáho bodu, 6,57 procentního bodu). Tedy nemůžeme s jistotou 95% říct, že proměnná age nemá neutrální průměrně marginální efekt na šanci na úspěch, jelikož na tomto intervalu leží i 0.
+##Tento odhad se dle metody bootstrapu nachází na 95% intervalu spolehlivosti (-0,32 procentního bodu, 6,62 procentnáho bodu). Tedy nemůžeme s jistotou 95% říct, že proměnná age nemá neutrální průměrně marginální efekt na šanci na úspěch.
+```
+

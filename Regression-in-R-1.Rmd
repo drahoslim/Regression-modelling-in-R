@@ -1,0 +1,391 @@
+---
+title: "Úkol_1_Ekonometrie"
+author: "DrL"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+setwd("C:/Users/draho/OneDrive - Vysoká škola ekonomická v Praze/4EK333 Ekonometrie 1/úkol/úkol 1")
+print(getwd())
+dataset1<- read.csv("limd00_data_1.csv")
+dataset2<- read.csv("limd00_data_2.csv")
+# Nastavení ####
+options(scipen=7)
+library(multcomp)
+```
+Pokyny k vypracování úkolu:
+
+Řešení budete odevzdávat prostřednictvím Moodle — příslušný dotazník se tam brzy objeví. Zadání má podobu editovatelného formuláře, abyste si sem mohli rovnou zapisovat a ukládat své odpovědi. Po dokončení a kontrole je pak jednoduše zkopírujete do dotazníku v Moodle.
+
+Pozor, celkový počet stran zadání je 4. Na konci některých stran může být hodně bílého místa (aby se úlohy nedělily přes více stran), tak ať vás to nezmate.
+
+Všechny výsledky uvádějte s přesností na čtyři platné číslice (viz: Wikipedia - Significant figures), kromě výsledků, které v absolutní hodnotě vycházejí menší než 10⁻⁶ — ty uveďte jako „0,0000“ (to se bude týkat typicky velmi nízkých p-hodnot).
+
+V dotazníku Moodle jsou možnosti formátování velmi omezené. Dodržujte proto prosím tyto konvence:
+
+místo „H₀“ pište jednoduše „H0“;
+
+místo „β₃“ pište „B3“;
+
+místo „β̂₅“ pište „ˆB5“;
+
+místo „a ≤ b ≠ c“ pište „a <= b != c“.
+
+Každý z vás má připraveny dva vlastní datové soubory, pojmenované ve formátu: login_data_1.csv a login_data_2.csv, kde „login“ je vaše uživatelské jméno (například novj94). Příklad názvu prvního souboru: novj94_data_1.csv.
+
+S prvním datovým souborem budete pracovat v úlohách 1–6. Tento soubor obsahuje výběr z průřezových dat použitých v článku Anglin a Gençay (1996) a popisuje ceny domů prodaných v kanadských okresech Windsor a Essex v roce 1987.
+
+Proměnné v datech:
+
+price: cena domu v kanadských dolarech (CAD),
+
+lotsize: velikost pozemku ve čtverečních stopách (ft²),
+
+bedrooms: počet ložnic,
+
+bathrms: počet koupelen,
+
+driveway: 1, pokud má dům vybudovanou příjezdovou cestu,
+
+fullbase: 1, pokud má dům plnohodnotný sklep,
+
+airco: 1, pokud je dům vybaven centrální klimatizací.
+
+Pomocí metody nejmenších čtverců a s použitím běžných (nerobustních) směrodatných chyb odhadnete lineární regresní model:
+
+log(price) = β₀ + β₁ × log(lotsize) + β₂ × bedrooms + β₃ × driveway + β₄ × fullbase + β₅ × airco + u
+
+kde log(x) označuje přirozený logaritmus.
+
+V úlohách 1–6 budete pracovat s touto odhadnutou rovnicí.
+
+```{r}
+model1<- lm(log(price) ~ log(lotsize) + bedrooms + driveway + fullbase + airco, data=dataset1)
+summary(model1)
+```
+
+
+Úloha 1
+Interpretujte získaný koeficient determinace. Zdůrazňujeme, že význam slova „interpretujte“ nespočívá v prostém uvedení výsledné hodnoty; buďte výmluvnější. (Příslušný číselný údaj by nicméně neměl v odpovědi chybět.)
+```{r}
+#Odpověď: R2 = 0.4811
+#Interpretace pomocí tohoto modelu jsem dokázal vysvětli téměř polovinu  variability logaritmu ceny domu. Proměnná se váže k relativním (procentuálním) změnám ceny domu.
+```
+
+Úloha 2
+Představte si, že vaším cílem je komunikovat výsledky regresní analýzy směrem k široké (odborné) veřejnosti. Uveďte, jak byste interpretovali odhadnutý vliv velikosti pozemku na cenu domu. Ve svém vyjádření nepoužívejte názvy proměnných obsažených v datovém souboru, nýbrž běžné pojmy jako „cena domu“ a „velikost pozemku“. Odpověď by měla být stručná, na jednu či dvě věty, a měla by se v ní určitě objevit tři čísla, která budou odrážet jak bodový odhad regresního koeficientu, tak i meze jeho intervalu spolehlivosti.
+```{r}
+#Pokud se velikost pozemku zvýší o 1 %, průměrná cena domu se zvýší přibližně o 0,35 %. na konfidečním intervalu odhadnutého koeficientu (0.10536711 (%), 0.6024903(%) ) na 0,1% hladiny významnosti.
+confint(model1, level = 0.999)  
+```
+
+Úloha 3
+Na 5% hladině významnosti testujte, zda jsou domy disponující příjezdovou cestou dražší než domy bez ní; při formulaci testu volte vhodnou jednostrannou alternativu. Při formálním zápisu nulové a alternativní hypotézy se držte značení zavedeného v rovnici (1).
+
+a) Formální zápis nulové a alternativní hypotézy
+b) Výsledná p-hodnota (číslo)
+c) Textové vyhodnocení testu
+```{r}
+# Shrnutí modelu
+summary(model1)
+
+# Získání koeficientu a standardní chyby pro driveway
+b <- coef(model1)["driveway"]
+se <- summary(model1)$coefficients["driveway", "Std. Error"]
+ 
+#a)H0: driveway nemá vliv (β = 0)
+#H1: driveway zvyšuje cenu domu (β > 0)
+
+# Kvantil t-rozdělení pro 95% jednostranný interval
+alpha <- 0.05
+df <- df.residual(model1)
+t_crit <- qt(1 - alpha, df)
+
+# Dolní mez jednostranného intervalu
+lower_bound <- b - t_crit * se
+# Výsledek
+lower_bound
+
+# Testová statistika
+t_stat <- b / se
+
+# P-hodnota pro jednostranný test (H1: beta > 0)
+p_value <- 1 - pt(t_stat, df)
+
+# Výsledek
+p_value
+#b)P-hodnota pro tento test má hodnotu 0,0418.
+#c)Tím pádem na hladině významnosti zamítám hypotézu H0, že to, jestli má dům příjezdovou cestu nemá vliv na jeho cenu na 5% hladině významnosti. Existuje statisticky významný rozdíl, domy s příjezdovou cestou jsou dražší.
+```
+
+Úloha 4
+Pan Ignor, realitní makléř, sveřepě tvrdí, že elasticita ceny domu vzhledem k rozloze jeho pozemku je rovna jedné (při neměnných hodnotách ostatních pozorovaných charakteristik, jako jsou počet ložnic, přítomnost sklepa apod.). Proveďte vhodný statistický test, který jeho tvrzení ověří v kontextu vámi odhadnutého modelu. Testujte na 1% hladině významnosti.
+
+a) Formální zápis nulové a alternativní hypotézy
+b) Hodnota testové statistiky (číslo)
+c) Výsledná p-hodnota (číslo)
+d) Textové vyhodnocení testu
+```{r}
+#a)H0 Se změnou změnou rozlohy pozemku domu o 1 % se průměrně změní cena domu o 1 % při ostatních neměných hodnotách proměnných.
+#H1 Se změnou změnou rozlohy pozemku domu o 1 % se průměrně změní cena domu o jinou částku než 1 % při ostatních neměných hodnotách proměnných.
+
+b_elas <- coef(model1)["log(lotsize)"]
+se_elas <- summary(model1)$coefficients["log(lotsize)", "Std. Error"]
+t_elas<- (b_elas-1)/se_elas
+#b)Hodnota testové statistiky je -8,89.
+p_value_elas<- 2 * (1 - pt(abs(t_elas), df))
+p_value_elas
+#c) Výsledná p-hodnota (číslo) je 0.0000.
+p_value_elas<0.01
+#d)Textové vyhodnocení testu: Na hladině významnosti 0,01 zamítáme alternativní hypotézu ve prospěch té alternativní, tedy na hladině významnosti 1% není možné, že mezi velikostí pozemku v ft a cenou pozemku v CAD figuruje jednotková elasticita.
+```
+
+Úloha 5
+Prostřednictvím běžného F-testu ověřte sdruženou významnost všech indikátorových (dummy) proměnných ve vašem modelu. Testujte na 1% hladině významnosti.
+
+a) Hodnota testové statistiky (číslo)
+b) Stupně volnosti pro čitatel testové statistiky (číslo)
+c) Stupně volnosti pro jmenovatel testové statistiky (číslo)
+d) Kritická hodnota (číslo)
+e) Textové vyhodnocení testu
+```{r}
+#aa)Hypotézy F_testu
+#H0 všechny vysvětlující dummy proměnné v modelu nemají vliv na logaritmus ceny.
+#H1 Alespoň jedna dummy proměnná v modelu má vliv na logaritmus ceny..
+
+# Definujeme hypotézu pro F-test, že koeficienty pro všechny dummy proměnné jsou nulové
+hypothesis <- c("driveway = 0", "fullbase = 0", "airco = 0")
+
+# Provedeme F-test
+F_test_5<- linearHypothesis(model1, hypothesis, test = "F")
+
+#a) Výsledek "F-statistic: 6,0757 on 3 and 79 DF,  p-value: 0.0009. Tedy vidíme, že nulovou hypotézu můžeme zamítnout, alespoň jedna proměnná v modelu je statisticky významná.
+
+#b) 3
+#c) 79
+#d) Kritická hodnota F je 4.040
+F_kritická_hodnota <-qf(0.99, df1 = 3, df2 = 79)
+f_statistic <- F_test_5[2, "F"]
+f_statistic>F_kritická_hodnota
+#e) Zamítáme nulovou hypotézu na hladině významnosti 1 %, tedy je alespoň jedna dummy proměnnná modelu významná. 
+
+
+```
+
+Úloha 6
+Pan Ignor dále tvrdí, že vybavenost domu sklepem má stejný vliv na cenu jako vybavenost domu klimatizací. Použijte vhodný statistický test pro vyhodnocení tohoto tvrzení. Testujte na 5% hladině významnosti.
+
+a) Formální zápis nulové a alternativní hypotézy
+b) Výsledná p-hodnota (číslo)
+c) Textové vyhodnocení testu
+```{r}
+library(car)
+
+#a)Formální zápis nulové a alternativní hypotézy
+#H0 Vybavenost domu sklepem má stejný vliv na cenu jako vybavenost domu klimatizací.
+#H1 Vybavenost domu sklepem má rozdílný vliv na cenu jako vybavenost domu klimatizací.
+
+#b) interpretuje se dobře se dobře, jelikož jsou to obě dummy proměnné
+linearHypothesis(model1, "fullbase = airco")
+
+
+#c) P-hodnota testu jedné lineární restrikce je 0.3319, tím pádem na 5% hladině významnosti nezamítám H0 veprospěch H0. Nemůžu tvrdit na hladině významnosti 0.05, že "#H0 Vybavenost domu sklepem má stejný vliv na cenu jako vybavenost domu klimatizací".
+```
+
+Pro zbývající úlohy použijte druhý datový soubor, tj. soubor s názvem podle vzoru login_data_2.csv. Jedná se o průřezový datový soubor, každé pozorování zachycuje charakteristiky jednoho respondenta výběrového šetření. Proměnné mají následující význam:
+  
+wage je hodinová mzda respondenta v dolarech
+
+age je věk respondenta v letech
+
+educ je počet dokončených let vzdělání
+
+female je indikátor pohlaví (= 1 pro ženy, = 0 pro muže)
+
+married = 1 pro sezdané respondenty
+
+urban = 1 pro respondenty žijící ve městech (v následujícím textu budeme používat zjednodušené označení město/vesnice)
+
+Ostatní proměnné z datového souboru v domácím úkolu potřebovat nebudete v domácím úkolu potřebovat.
+
+Ve všech úlohách s tímto datovým souborem budete pracovat s následujícím regresním modelem:
+
+log(wage) = β₀ + β₁·age + β₂·age² + β₃·educ + β₄·married + β₅·female + β₆·urban + β₇·(female × urban) + u
+
+kde log(wage) značí přirozený logaritmus mzdy.
+
+Nebude-li řečeno jinak, pracujte s odhadem této regresní rovnice pořízeným pomocí metody nejmenších čtverců (OLS), a to za použití konvenčních směrodatných chyb.
+
+Úloha 7
+Ověřte, že vztah mezi věkem a (logaritmickou) mzdou má podobu křivky ve tvaru obráceného U (podle čeho to poznáme?). Při jakém stáří začíná log(wage) klesat s věkem? Jinými slovy, jaký je bod zlomu vlivu věku na mzdu?
+(Pozn.: Nelze vyloučit, že v některém z datových souborů bude tvar výše zmíněné křivky obrácený – konvexní; bod zlomu můžete nicméně najít a vykázat i v tomto případě.)
+
+Výstup:
+Bod zlomu (číslo)
+```{r}
+model2 <- lm(log(wage) ~ age + I(age^2) + educ + married + female + urban + female:urban, data=dataset2)
+summary(model2)
+
+# Koeficienty modlelu
+b <- coef(model2)
+
+# Bod zlomu (věk, kdy log(mzda) přestane růst a začne klesat)
+age_breakpoint <- -b["age"] / (2 * b["I(age^2)"])
+age_breakpoint
+
+#a)Jelikož proměnná age je formulovaná pomocí kvadratické funkce, tak to, že křivka proměnná vztah mezi věkem a (logaritmickou) mzdou má podobu konkávního tvaru poznáme dle znaménka o znaménka proměnné u odhadnutého beta 2.
+
+#b)47.1526, toto je věk, kdy se láme trend funkce, mzda začíná průměrně klesat.
+
+ggplot(dataset2, aes(x = age, y = log(wage))) +
+  geom_point(alpha = 0.5, color = "darkgray") +
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2), color = "blue", se = FALSE, size = 1.2) +
+  labs(title = "Vztah mezi věkem a logaritmem mzdy",
+       x = "Věk",
+       y = "log(mzda)") +
+  theme_minimal()
+```
+
+Úloha 8
+Pomocí aproximativního vztahu
+Δlog(wage) ≈ 100·(β₁ + 2·β₂·age)·Δage
+najděte mezní efekt třicátého pátého a pětačtyřicátého roku života na mzdu (efekt jednoho dodatečného roku stáří pro dva různé referenční věky). Výsledek popište celou větou, aby byla zřejmá jeho interpretace.
+
+(a) Pro 35. rok
+(b) Pro 45. rok
+```{r}
+#Pokud chápu správně, tak mám najít mezní efekt z 34. roku na 35. rok. Do "Δage", zadám rozdíl daných let, to znamená 1 a do "2·β₂·age" zadám 35?
+
+# Koeficienty z modelu
+b <- coef(model2)
+
+# Mezní efekt ve 35 letech
+marginal_35 <- 100 * (b["age"] + 2 * b["I(age^2)"] * 35)*1
+
+# Mezní efekt ve 45 letech
+marginal_45 <- 100 * (b["age"] + 2 * b["I(age^2)"] * 45)*1
+
+marginal_35
+marginal_45
+
+#„Ve věku 35 let se s každým dalším rokem očekává nárůst mzdy o  1,8429 %.“ 
+#„Ve věku 45 let se s každým dalším rokem očekává nárůst mzdy o  0.3264 %.“ 
+
+#Zároveň ale mám nejistotu v datech, jelikož nevím, za jak dlouho oslaví další narozeniny (jestli za pár dnů nebo za pár měsíců). Mám naměřený dokonnčený věk věk, nikoli dosažený. 
+#   marginal age 35
+1.8429 
+#   marginal age 35 
+0.3264
+
+```
+
+Úloha 9
+Jaký je podle Vámi odhadnutého modelu očekávaný procentuální rozdíl ve mzdě jinak srovnatelné ženy a muže, kteří bydlí oba na vesnici? Jaký by byl tento údaj pro osoby žijící ve městě?
+Jelikož je pravděpodobné, že tento procentuální rozdíl ve vašich výsledcích nebude právě malý, nepoužívejte aproximativní vyjádření pro interpretaci koeficientu s logaritmickou závisle proměnnou, nýbrž použijte přesnější výpočet z přednášky. Vyjděte z mezního efektu proměnné female, tj. muži budou referenční kategorie.
+
+Výsledek popište celou větou, aby byla zřejmá jeho interpretace; začněte třeba slovy „mzda ženy je o ... “.
+
+Následně pro tyto rozdíly spočtěte 95% intervaly spolehlivosti.
+
+(a) Výsledky pro vesnici
+(b) Výsledky pro město
+(c) 95% interval spolehlivosti pro vesnici
+(d) 95% interval spolehlivosti pro město
+```{r}
+#žena 1, vesnice 0
+#muž 0, vesnice 0
+
+#žena 1, město 1
+#muž 0, město 1
+
+#a)
+b_female <- coef(model2)["female"]
+diff_rural <- 100 * (exp(b_female) - 1)
+
+b_female_urban <- coef(model2)["female"] + coef(model2)["female:urban"]
+diff_urban <- 100 * (exp(b_female_urban) - 1)
+
+#c)
+confint_rural <- confint(model2, "female")
+CI_rural <- 100 * (exp(confint_rural) - 1)
+
+#d)
+K <- rbind("female + female:urban" = c(0, 0, 0, 0,0, 1, 0, 1))  # podle pořadí proměnných
+glht_test <- glht(model2, linfct = K)
+CI_urban <- confint(glht_test)$confint
+CI_urban <- 100 * (exp(CI_urban[, c("lwr", "upr")]) - 1)
+
+diff_rural
+diff_urban
+CI_rural
+CI_urban
+
+#(a) Mzda ženy je o 26.3470 % nižší než mzda muže, pokud oba žijí na vesnici.
+
+#(b) Mzda ženy je o -22.9210 % nižší než mzda muže, pokud oba žijí ve městě.
+
+#(c) 95% interval spolehlivosti pro rozdíl ve mzdě mezi ženou a mužem na vesnici je od -35.38639 % do -16.04294 %
+
+#(d) 95% interval spolehlivosti pro rozdíl ve mzdě mezi ženou a mužem ve městě je od -27.8933 % do -17.6058 %
+```
+
+Úloha 10
+Liší se významně mezní efekt pohlaví na mzdu ve městě a na vesnici? Testujte na 5% hladině významnosti.
+
+(a) Formální zápis nulové a alternativní hypotézy
+(b) Výsledná p-hodnota
+(c) Textové vyhodnocení testu
+```{r}
+#a) oboustrannný test
+#H0: Mezní efekt pohlaví na mzdu ve městě a na vesnici se neliší;beta female =beta female:urban
+#H1: Mezní efekt pohlaví na mzdu ve městě a na vesnici se liší;"beta female!=beta female:urban"
+
+#female:urban  zkoumá, jak se vliv pohlaví na mzdu liší mezi městem a vesnicí
+
+# Výpočet konfidenčního intervalu pro koeficient interakce
+confint(model2, level = 0.95)
+summary(model2)
+
+#Pvalue[female:urban]=0.54342, což je větší než alfa=0.05, tím pádem nezamítám nulovou hypotézu ve prospěch alternativní, tento test nenasvědčuje tomu, že Mezní efekt pohlaví na mzdu ve městě a na vesnici se liší.
+```
+
+Úloha 11
+Na základě modelu chceme predikovat mzdu 36letého ženatého muže s 16 lety vzdělání, žijícího ve velkém městě.
+
+Upozorněme, že predikujeme v modelu s logaritmickou závisle proměnnou, což vyžaduje opatrnost.
+
+Nalezněte predikci za předpokladu, že náhodná složka u má normální rozdělení a je nezávislá na vysvětlujících proměnných, tj. že platí předpoklady klasického lineárního regresního modelu.
+
+Poté nalezněte predikovanou mzdu, tentokrát za použití Duanova estimátoru.
+
+(Mimo soutěž: zamyslete se, jak byste posoudili, zda můžete předpokladu normality náhodné složky věřit, a posuďte, jak velký rozdíl ve výsledcích mezi oběma použitými estimátory nastal.)
+
+(a) Predikce vycházející z předpokladu normality náhodné složky
+(b) Predikce na základě Duanova estimátoru
+```{r}
+residuals_model2<-residuals(model2)
+
+newdata <- data.frame(
+  age = 36,
+  educ = 16,
+  married = 1,
+  female = 0,      
+  urban = 1
+)
+# female:urban – si R vytvoří automaticky při predikci?
+
+predicted_logwage <- predict(model2, newdata = newdata)
+predicted_logwage
+
+# Reziduální směrodatná odchylka (standard error of residuals)
+s <- summary(model2)$sigma
+
+# Opravená predikce mzdy
+corrected_wage_norm <- exp(predicted_logwage + 0.5 * s^2)
+
+B_duan<-mean(exp(residuals_model2))
+corrected_wage_duan <- exp(predicted_logwage)*B_duan
+
+corrected_wage_norm
+corrected_wage_duan
+```
